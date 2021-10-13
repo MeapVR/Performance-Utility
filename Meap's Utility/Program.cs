@@ -1,9 +1,10 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace Meaps_Utility
 {
@@ -21,7 +22,7 @@ namespace Meaps_Utility
 
         static void Main()
         {
-            Console.Title = "Meap's Performance Utility   V.1.0";
+            Console.Title = "Meap's Performance Utility   V.1.1";
             Console.WindowHeight = 12;
             Console.WindowWidth = 52;
 
@@ -32,9 +33,14 @@ namespace Meaps_Utility
                 SilentMode = true;
             }
 
-            // Update system startup registry key, just in case.
-            RegistryKey key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-            key.SetValue("Meap's Performance Utility", System.Reflection.Assembly.GetExecutingAssembly().Location + " -silent");
+            // Have the application start up automatically when the OS boots.
+            string ExePath = Assembly.GetEntryAssembly().Location;
+            if (ExePath.Contains("'"))
+            {
+                MessageBox.Show("Please move the .exe file of this utility to a different path, the path to the .exe file can not contain the character: ' (single quotation mark)\n\nThe Utility will now close, please move it to a different location and run it again.", "Meap's Performance Utility - Error");
+                Environment.Exit(0);
+            }
+            ExecuteCMDCommand($"schtasks.exe /create /f /rl highest /sc onlogon /tn \"Meap's Performance Utility\" /tr \"'{ExePath}' -silent\"");
 
             // Set the Windows timer resolution as low as possible.
             Console.Write($"Setting timer resolution from 1ms to 0.5ms... ");
@@ -111,8 +117,14 @@ namespace Meaps_Utility
                 ShowWindow(handle, SW_HIDE);
                 if (File.Exists("Rkeys.reg"))
                     Process.Start("RKeys.reg");
+                else
+                {
+                    MessageBox.Show("The file: 'RKeys.reg' could not be found. Please place it in the same directory and run the Utility again.", "Meap's Performance Utility - Missing a file");
+                    Environment.Exit(0);
+                }
             }
-            Thread.Sleep(-1);
+            Console.Clear();
+            Thread.Sleep(-1); // Make sure the application does not close. If it does the timer resolution will reset back to default.
         }
 
         internal static string ExecuteCMDCommand(string command)
