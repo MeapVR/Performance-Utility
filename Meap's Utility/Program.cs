@@ -119,7 +119,7 @@ namespace Meaps_Utility
                     Process.Start("RKeys.reg");
                 else
                 {
-                    MessageBox.Show("The file: 'RKeys.reg' could not be found. Please place it in the same directory and run the Utility again.", "Meap's Performance Utility - Missing a file");
+                    MessageBox.Show("The file: 'RKeys.reg' could not be found. Please place it in the same directory and run the utility again.", "Meap's Performance Utility - Missing a file");
                     Environment.Exit(0);
                 }
             }
