@@ -23,7 +23,7 @@ namespace Meaps_Utility
 
         static void Main()
         {
-            Console.Title = "Meap's Performance Utility   V.1.1";
+            Console.Title = "Meap's Performance Utility   V.1.2";
             Console.WindowHeight = 12;
             Console.WindowWidth = 60;
 
@@ -59,7 +59,7 @@ namespace Meaps_Utility
             string TempPath = Path.GetTempPath();
             if (Directory.Exists(TempPath))
             {
-                Console.Write("Cleaning Temporary files... ");
+                Console.Write("Cleaning temporary files... ");
                 Console.Write(DeleteAllInFolder(TempPath));
             }
             else
@@ -118,7 +118,6 @@ namespace Meaps_Utility
                 ExecuteCMDCommand("powercfg /list");
             }
 
-            Console.ReadKey();
             // Hide the window.
             if (!SilentMode)
             {
