@@ -23,7 +23,7 @@ namespace Meaps_Utility
 
         static void Main()
         {
-            Console.Title = "Meap's Performance Utility   V.1.2";
+            Console.Title = "Meap's Performance Utility   V.1.3";
             Console.WindowHeight = 12;
             Console.WindowWidth = 60;
 
@@ -41,8 +41,7 @@ namespace Meaps_Utility
                 MessageBox.Show("Please move the .exe file of this utility to a different path, the path to the .exe file can not contain the character: ' (single quotation mark)\n\nThe Utility will now close, please move it to a different location and run it again.", "Meap's Performance Utility - Error");
                 Environment.Exit(0);
             }
-            ExecuteCMDCommand($"schtasks.exe /delete /f /tn \"Meap's Performance Utility\"");
-            ExecuteCMDCommand($"schtasks.exe /create /f /rl highest /sc onlogon /tn \"Meap's Performance Utility\" /tr \"'{ExePath}' -silent\"");
+            ExecuteCMDCommand($"schtasks.exe /delete /f /tn \"Meap's Performance Utility\" && schtasks.exe /create /f /rl highest /sc onlogon /tn \"Meap's Performance Utility\" /tr \"'{ExePath}' -silent\"");
 
             // Fetch Windows power plans.
             ExecuteCMDCommand("powercfg /list");
@@ -104,18 +103,13 @@ namespace Meaps_Utility
             Console.Write(ExecuteCMDCommand(@"powercfg /h off"));
 
             // Run gaming performance boost commandline options.
-            Console.Write("Enabling gaming performance boosts step 1... ");
-            Console.Write(ExecuteCMDCommand("bcdedit /set useplatformtick yes"));
-            Console.Write("Enabling gaming performance boosts step 2... ");
-            Console.Write(ExecuteCMDCommand("bcdedit /set disabledynamictick yes"));
-            Console.Write("Enabling gaming performance boosts step 3... ");
-            Console.Write(ExecuteCMDCommand("bcdeditd /deletevalue useplatformclock"));
+            Console.Write("Enabling gaming performance boosts... ");
+            Console.Write(ExecuteCMDCommand("bcdedit /set useplatformtick yes && bcdedit /set disabledynamictick yes && bcdedit /deletevalue useplatformclock"));
 
             if (!FoundUltimatePerfPlan)
             {
-                ExecuteCMDCommand("powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61");
+                ExecuteCMDCommand("powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 && powercfg /list");
                 Console.WriteLine("Creating Ultimate Performance power plan... OK.");
-                ExecuteCMDCommand("powercfg /list");
             }
 
             // Hide the window.
@@ -160,7 +154,7 @@ namespace Meaps_Utility
                         if (!args.Data.Contains("*")) // Ultimate Performance plan exists but is not set as default.
                         {
                             string UltimatePerfSchemeID = args.Data.Replace(" ", string.Empty).Replace("PowerSchemeGUID:", string.Empty).Replace("(Meap'sPerformanceUtility(UltimatePerformance))", string.Empty).Replace("*", string.Empty);
-                            ExecuteCMDCommand("powercfg /setactive " + UltimatePerfSchemeID); // Set the Ultimate Performance plan as default.
+                            ExecuteCMDCommand("powercfg /setactive " + UltimatePerfSchemeID + " && powercfg /change standby-timeout-dc 20 && powercfg /change monitor-timeout-dc 0 && powercfg /change standby-timeout-ac 0 && powercfg /change monitor-timeout-ac 0"); // Set the Ultimate Performance plan as default.
                             Console.WriteLine("Setting Ultimate Performance as default power plan... OK.");
                         }
                     }
@@ -173,7 +167,7 @@ namespace Meaps_Utility
                             ExecuteCMDCommand($"powercfg /changename {UltimatePerfSchemeID} \"Meap's Performance Utility (Ultimate Performance)\" \"Provides ultimate performance.\"");
                             if (!args.Data.Contains("*")) // Ultimate Performance plan exists but is not set as default.
                             {
-                                ExecuteCMDCommand("powercfg /setactive " + UltimatePerfSchemeID); // Set the Ultimate Performance plan as default.
+                                ExecuteCMDCommand("powercfg /setactive " + UltimatePerfSchemeID + " && powercfg /change standby-timeout-dc 20 && powercfg /change monitor-timeout-dc 0 && powercfg /change standby-timeout-ac 0 && powercfg /change monitor-timeout-ac 0"); // Set the Ultimate Performance plan as default.
                                 Console.WriteLine("Setting Ultimate Performance as default power plan... OK.");
                             }
                         }
