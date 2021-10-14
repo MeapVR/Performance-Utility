@@ -131,7 +131,7 @@ namespace Meaps_Utility
                     Environment.Exit(0);
                 }
 
-                MessageBox.Show("Your machine requires a reboot for these changes to take effect.", "Meap's Performance Utility - Reboot required");
+                MessageBox.Show("If this is the first time you are running this utility your machine requires a reboot for these changes to take effect.", "Meap's Performance Utility - Reboot required");
             }
             Console.Clear();
             Thread.Sleep(-1); // Make sure the application does not close. If it does the timer resolution will reset back to default.
@@ -150,8 +150,7 @@ namespace Meaps_Utility
             using (Process process = new Process())
             {
                 process.ErrorDataReceived += (sender, args) => {
-                    //Console.WriteLine("Failed: " + args.Data);
-                    if (args.Data != null && args.Data.Length > 0) { result = "FAIL!\n"; }
+                    if (args.Data != null) { result = "FAIL!\n"; }
                 };
 
                 process.OutputDataReceived += (sender, args) => {
