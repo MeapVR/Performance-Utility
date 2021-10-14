@@ -11,6 +11,7 @@ namespace Meaps_Utility
     internal class Program
     {
         internal static bool SilentMode = false;
+        internal static bool FoundUltimatePerfPlan = false;
         internal static IntPtr handle = GetConsoleWindow();
         [DllImport("kernel32.dll")]
         internal static extern IntPtr GetConsoleWindow();
@@ -18,13 +19,13 @@ namespace Meaps_Utility
         internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         internal const int SW_HIDE = 0;
         [DllImport("ntdll.dll", EntryPoint = "NtSetTimerResolution")]
-        public static extern void NtSetTimerResolution(uint DesiredResolution, bool SetResolution, ref uint CurrentResolution);
+        internal static extern void NtSetTimerResolution(uint DesiredResolution, bool SetResolution, ref uint CurrentResolution);
 
         static void Main()
         {
             Console.Title = "Meap's Performance Utility   V.1.1";
             Console.WindowHeight = 12;
-            Console.WindowWidth = 52;
+            Console.WindowWidth = 60;
 
             // Check if the current process has been started with arguments.
             if (Environment.CommandLine.Contains("-silent"))
@@ -40,7 +41,11 @@ namespace Meaps_Utility
                 MessageBox.Show("Please move the .exe file of this utility to a different path, the path to the .exe file can not contain the character: ' (single quotation mark)\n\nThe Utility will now close, please move it to a different location and run it again.", "Meap's Performance Utility - Error");
                 Environment.Exit(0);
             }
+            ExecuteCMDCommand($"schtasks.exe /delete /f /tn \"Meap's Performance Utility\"");
             ExecuteCMDCommand($"schtasks.exe /create /f /rl highest /sc onlogon /tn \"Meap's Performance Utility\" /tr \"'{ExePath}' -silent\"");
+
+            // Fetch Windows power plans.
+            ExecuteCMDCommand("powercfg /list");
 
             // Set the Windows timer resolution as low as possible.
             Console.Write($"Setting timer resolution from 1ms to 0.5ms... ");
@@ -48,15 +53,14 @@ namespace Meaps_Utility
             bool SetResolution = true;
             uint CurrentResolution = 0;
             NtSetTimerResolution(DesiredResolution, SetResolution, ref CurrentResolution);
-            Console.Write("Done!\n");
+            Console.Write("OK.\n");
 
             // Cleanup temp files.
             string TempPath = Path.GetTempPath();
             if (Directory.Exists(TempPath))
             {
                 Console.Write("Cleaning Temporary files... ");
-                DeleteAllInFolder(TempPath);
-                Console.Write("Done!\n");
+                Console.Write(DeleteAllInFolder(TempPath));
             }
             else
                 Console.WriteLine("Could not find Prefetch, ignoring.");
@@ -66,8 +70,7 @@ namespace Meaps_Utility
             if (Directory.Exists(Prefetchpath))
             {
                 Console.Write("Cleaning Prefetch... ");
-                DeleteAllInFolder(Prefetchpath);
-                Console.Write("Done!\n");
+                Console.Write(DeleteAllInFolder(Prefetchpath));
             }
             else
                 Console.WriteLine("Could not find Prefetch, ignoring.");
@@ -77,8 +80,7 @@ namespace Meaps_Utility
             if (Directory.Exists(SoftwareDistributionPath))
             {
                 Console.Write("Cleaning SoftwareDistribution... ");
-                DeleteAllInFolder(SoftwareDistributionPath);
-                Console.Write("Done!\n");
+                Console.Write(DeleteAllInFolder(SoftwareDistributionPath));
             }
             else
                 Console.WriteLine("Could not find SoftwareDistribution, ignoring.");
@@ -88,8 +90,7 @@ namespace Meaps_Utility
             if (Directory.Exists(VRChatCachePath))
             {
                 Console.Write("Cleaning VRChat Cache... ");
-                DeleteAllInFolder(VRChatCachePath);
-                Console.Write("Done!\n");
+                Console.Write(DeleteAllInFolder(VRChatCachePath));
             }
             else
                 Console.WriteLine("Could not find VRChat Cache, ignoring.");
@@ -108,8 +109,16 @@ namespace Meaps_Utility
             Console.Write("Enabling gaming performance boosts step 2... ");
             Console.Write(ExecuteCMDCommand("bcdedit /set disabledynamictick yes"));
             Console.Write("Enabling gaming performance boosts step 3... ");
-            Console.Write(ExecuteCMDCommand("bcdedit /deletevalue useplatformclock"));
+            Console.Write(ExecuteCMDCommand("bcdeditd /deletevalue useplatformclock"));
 
+            if (!FoundUltimatePerfPlan)
+            {
+                ExecuteCMDCommand("powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61");
+                Console.WriteLine("Creating Ultimate Performance power plan... OK.");
+                ExecuteCMDCommand("powercfg /list");
+            }
+
+            Console.ReadKey();
             // Hide the window.
             if (!SilentMode)
             {
@@ -122,6 +131,8 @@ namespace Meaps_Utility
                     MessageBox.Show("The file: 'RKeys.reg' could not be found. Please place it in the same directory and run the utility again.", "Meap's Performance Utility - Missing a file");
                     Environment.Exit(0);
                 }
+
+                MessageBox.Show("Your machine requires a reboot for these changes to take effect.", "Meap's Performance Utility - Reboot required");
             }
             Console.Clear();
             Thread.Sleep(-1); // Make sure the application does not close. If it does the timer resolution will reset back to default.
@@ -136,26 +147,51 @@ namespace Meaps_Utility
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            string result;
+            string result = "OK.\n";
             using (Process process = new Process())
             {
-                try
-                {
-                    process.StartInfo = startInfo;
-                    process.Start();
-                    string text = process.StandardOutput.ReadToEnd();
-                    if (string.IsNullOrEmpty(text))
+                process.ErrorDataReceived += (sender, args) => {
+                    //Console.WriteLine("Failed: " + args.Data);
+                    if (args.Data != null && args.Data.Length > 0) { result = "FAIL!\n"; }
+                };
+
+                process.OutputDataReceived += (sender, args) => {
+                    if (!FoundUltimatePerfPlan && args.Data != null && args.Data.Contains("(Meap's Performance Utility (Ultimate Performance))"))
                     {
-                        text = process.StandardError.ReadToEnd();
+                        FoundUltimatePerfPlan = true;
+                        if (!args.Data.Contains("*")) // Ultimate Performance plan exists but is not set as default.
+                        {
+                            string UltimatePerfSchemeID = args.Data.Replace(" ", string.Empty).Replace("PowerSchemeGUID:", string.Empty).Replace("(Meap'sPerformanceUtility(UltimatePerformance))", string.Empty).Replace("*", string.Empty);
+                            ExecuteCMDCommand("powercfg /setactive " + UltimatePerfSchemeID); // Set the Ultimate Performance plan as default.
+                            Console.WriteLine("Setting Ultimate Performance as default power plan... OK.");
+                        }
                     }
-                    result = "Done!\n";
-                }
-                catch { result = "Failed!\n"; return result; }
+                    else
+                    {
+                        if (!FoundUltimatePerfPlan && args.Data != null && args.Data.Contains("(Ultimate Performance)"))
+                        {
+                            FoundUltimatePerfPlan = true;
+                            string UltimatePerfSchemeID = args.Data.Replace(" ", string.Empty).Replace("PowerSchemeGUID:", string.Empty).Replace("(UltimatePerformance)", string.Empty).Replace("*", string.Empty);
+                            ExecuteCMDCommand($"powercfg /changename {UltimatePerfSchemeID} \"Meap's Performance Utility (Ultimate Performance)\" \"Provides ultimate performance.\"");
+                            if (!args.Data.Contains("*")) // Ultimate Performance plan exists but is not set as default.
+                            {
+                                ExecuteCMDCommand("powercfg /setactive " + UltimatePerfSchemeID); // Set the Ultimate Performance plan as default.
+                                Console.WriteLine("Setting Ultimate Performance as default power plan... OK.");
+                            }
+                        }
+                    }
+                };
+
+                process.StartInfo = startInfo;
+                process.Start();
+
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
             }
             return result;
         }
 
-        internal static void DeleteAllInFolder(string path)
+        internal static string DeleteAllInFolder(string path)
         {
             DirectoryInfo di = new DirectoryInfo(path);
 
@@ -175,6 +211,7 @@ namespace Meaps_Utility
                 }
                 catch { }
             }
+            return "OK.\n";
         }
     }
 }
